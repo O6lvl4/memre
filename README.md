@@ -71,36 +71,11 @@ internal/
 
 ### Context map
 
-```mermaid
-flowchart LR
-    subgraph desktop[Desktop process]
-        deck["<b>deck</b><br/>Deck aggregate +<br/>Service + StatsRepo"]
-        card["<b>card</b><br/>Card aggregate +<br/>SRS application"]
-        knowledge["<b>knowledge</b><br/>KnowledgeSource"]
-        settings["<b>settings</b><br/>K/V config"]
-        ai["<b>ai</b><br/>Anti-corruption<br/>layer over LLMs"]
-        srs["<b>srs</b><br/>pure SM-2 kernel"]
-        platform["<b>platform</b><br/>sqlite / clock / idgen"]
-        events["<b>events</b><br/>in-process bus"]
-        composition["composition root"]
-    end
+<p align="center">
+  <img src="docs/assets/context-map.png" alt="MemRE bounded contexts" width="640" />
+</p>
 
-    subgraph external[External systems]
-        ollama["Ollama<br/>local daemon"]
-        anthropic["Anthropic API"]
-        claudecli["claude CLI"]
-    end
-
-    composition --> deck & card & knowledge & ai & settings
-    deck -->|Repository + StatsRepo| platform
-    card -->|Repository| platform
-    knowledge -->|Repository| platform
-    settings -->|Repository| platform
-    card -->|publishes card.Reviewed| events
-    card --> srs
-    deck --> srs
-    ai -->|Provider port| ollama & anthropic & claudecli
-```
+<sub>Source: [`docs/assets/context-map.mmd`](docs/assets/context-map.mmd) — rendered with [premaid](https://github.com/O6lvl4/premaid) (`pretty` theme).</sub>
 
 **Bounded context relationships**
 
