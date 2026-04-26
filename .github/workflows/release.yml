@@ -30,14 +30,16 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install Wails CLI
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
-      - name: Build frontend
+      - name: Install npm deps
         working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-      - name: Generate Wails TS bindings
+        run: npm ci
+      - name: Generate Wails TS bindings (before any tsc/vite run)
+        # frontend/bindings is gitignored. The frontend's tsc step
+        # imports from it, so bindings MUST exist before npm run build.
         run: $(go env GOPATH)/bin/wails3 generate bindings -ts
       - name: Package .app (production, ad-hoc signed)
+        # `darwin:package` chains: build:frontend → generate:icons →
+        # build:native → create:app:bundle → codesign:adhoc.
         run: $(go env GOPATH)/bin/wails3 task darwin:package
       - name: Determine tag
         id: tag
@@ -51,7 +53,8 @@ jobs:
           ARCH=$(uname -m)
           OUT="memre-${{ steps.tag.outputs.tag }}-darwin-${ARCH}.zip"
           ditto -c -k --keepParent --sequesterRsrc memre.app "$OUT"
-          shasum -a 256 "$OUT" | tee "$OUT.sha256"
+          shasum -a 256 "$OUT" > "$OUT.sha256"
+          cat "$OUT.sha256"
           ls -la "$OUT" "$OUT.sha256"
       - name: Upload to release
         uses: softprops/action-gh-release@v2
