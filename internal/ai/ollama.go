@@ -14,15 +14,21 @@ import (
 	"time"
 )
 
+// warmupState is split out so the Ollama struct itself stays
+// safely value-copyable in WithBaseURL / WithModel — the mutex lives
+// behind a pointer, not in the cloned struct.
+type warmupState struct {
+	mu   sync.Mutex
+	done bool
+}
+
 // Ollama implements Provider against a locally running Ollama daemon.
 // MEMRE_OLLAMA_URL / MEMRE_OLLAMA_MODEL override the defaults.
 type Ollama struct {
 	baseURL string
 	model   string
 	hc      *http.Client
-
-	warmupMu sync.Mutex
-	warmedUp bool
+	warmup  *warmupState
 }
 
 func NewOllama() *Ollama {
@@ -30,19 +36,21 @@ func NewOllama() *Ollama {
 		baseURL: envOr("MEMRE_OLLAMA_URL", "http://127.0.0.1:11434"),
 		model:   envOr("MEMRE_OLLAMA_MODEL", "gemma4:26b"),
 		hc:      &http.Client{Timeout: 240 * time.Second},
+		warmup:  &warmupState{},
 	}
 }
 
 // WithBaseURL / WithModel return a copy targeting a different daemon
 // or model. Used by httptest in tests; production code wires once at
-// composition time.
+// composition time. The clone gets a fresh warmupState so it does its
+// own one-shot warmup and doesn't share lock state with the original.
 func (o *Ollama) WithBaseURL(url string) *Ollama {
 	if url == "" {
 		return o
 	}
 	clone := *o
 	clone.baseURL = url
-	clone.warmedUp = false
+	clone.warmup = &warmupState{}
 	return &clone
 }
 
@@ -52,7 +60,7 @@ func (o *Ollama) WithModel(model string) *Ollama {
 	}
 	clone := *o
 	clone.model = model
-	clone.warmedUp = false
+	clone.warmup = &warmupState{}
 	return &clone
 }
 
@@ -101,13 +109,16 @@ func (o *Ollama) Status(ctx context.Context) Status {
 }
 
 func (o *Ollama) warmupOnce() {
-	o.warmupMu.Lock()
-	if o.warmedUp {
-		o.warmupMu.Unlock()
+	if o.warmup == nil {
+		o.warmup = &warmupState{}
+	}
+	o.warmup.mu.Lock()
+	if o.warmup.done {
+		o.warmup.mu.Unlock()
 		return
 	}
-	o.warmedUp = true
-	o.warmupMu.Unlock()
+	o.warmup.done = true
+	o.warmup.mu.Unlock()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 		defer cancel()

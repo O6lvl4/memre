@@ -11,9 +11,24 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Packages that don't transitively pull Wails GUI bits (GTK on Linux,
+# Cocoa on macOS). composition imports the Wails application package
+# which on Linux requires gtk+-3.0/webkit2gtk-4.1 system libs, so we
+# scope the Linux job to the pure-domain layer instead of installing
+# them just to run vet.
+env:
+  PURE_PKGS: >-
+    ./internal/ai/...
+    ./internal/card/...
+    ./internal/deck/...
+    ./internal/knowledge/...
+    ./internal/settings/...
+    ./internal/srs/...
+    ./internal/platform/...
+
 jobs:
   go:
-    name: Go test + vet
+    name: Go test + vet (pure layer)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,15 +36,12 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
-      # main.go embeds frontend/dist — that's CI-built only, so vet/build
-      # are scoped to internal/... here. The full-build job below verifies
-      # the embed compiles end to end on macOS.
-      - name: go vet (internal only)
-        run: go vet ./internal/...
+      - name: go vet
+        run: go vet ${{ env.PURE_PKGS }}
       - name: go test
-        run: go test -race -count=1 -cover ./internal/...
-      - name: go build (internal only)
-        run: go build ./internal/...
+        run: go test -race -count=1 -cover ${{ env.PURE_PKGS }}
+      - name: go build
+        run: go build ${{ env.PURE_PKGS }}
 
   frontend:
     name: Frontend build
@@ -51,7 +63,6 @@ jobs:
         working-directory: frontend
         run: npm ci
       - name: Generate Wails TS bindings
-        # frontend/bindings is gitignored; regenerate before tsc/vite.
         run: $(go env GOPATH)/bin/wails3 generate bindings -ts
       - name: Type check + Vite build
         working-directory: frontend
@@ -82,7 +93,9 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
-      - name: Build Go binary (now that frontend/dist exists for embed)
+      - name: go vet (full graph, including composition+wails on darwin)
+        run: go vet ./...
+      - name: Build Go binary
         run: go build -o memre .
       - name: Verify binary launches (3s smoke test)
         run: |
