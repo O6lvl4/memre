@@ -1,0 +1,22 @@
+.task
+bin
+frontend/dist
+frontend/node_modules
+frontend/bindings
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+
+# macOS
+.DS_Store
+
+# editors
+.idea/
+.vscode/
+*.swp
+
+# memre local artifacts
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*

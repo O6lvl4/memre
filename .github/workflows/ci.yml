@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go test + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: true
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test -race -count=1 -cover ./internal/...
+      - name: go build (ignore embed of frontend/dist)
+        # Frontend build runs in parallel; we can't embed without it,
+        # so just verify internal packages compile.
+        run: go build ./internal/...
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Type check + Vite build
+        run: npm run build
+
+  full-build:
+    name: Full app build (darwin)
+    runs-on: macos-latest
+    needs: [go, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Build Go binary
+        run: go build -o memre .
+      - name: Verify binary launches (3s smoke test)
+        run: |
+          ./memre &
+          PID=$!
+          sleep 3
+          if kill -0 $PID 2>/dev/null; then
+            echo "OK: app started"
+            kill $PID || true
+          else
+            wait $PID
+            echo "FAIL: app exited prematurely"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: memre-darwin-${{ github.sha }}
+          path: memre
+          if-no-files-found: error
+          retention-days: 14
