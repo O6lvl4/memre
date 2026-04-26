@@ -95,3 +95,22 @@ func (c Card) applyReview(rating srs.Rating, now time.Time) Card {
 }
 
 func isBlank(s string) bool { return strings.TrimSpace(s) == "" }
+
+// Validate enforces the same invariants as newCard / editQA on an
+// already constructed value. Repositories call this after loading from
+// storage so corrupt rows can never silently become a domain object.
+func (c Card) Validate() error {
+	if isBlank(c.ID) {
+		return errors.New("card id is required")
+	}
+	if isBlank(c.DeckID) {
+		return ErrNoDeck
+	}
+	if isBlank(c.Question) {
+		return ErrEmptyQuestion
+	}
+	if isBlank(c.Answer) {
+		return ErrEmptyAnswer
+	}
+	return nil
+}

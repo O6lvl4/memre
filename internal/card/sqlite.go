@@ -73,6 +73,9 @@ func (r *SqliteRepository) FindByID(ctx context.Context, id string) (Card, error
 		}
 		return Card{}, err
 	}
+	if err := c.Validate(); err != nil {
+		return Card{}, err
+	}
 	return c, nil
 }
 
@@ -88,6 +91,9 @@ func (r *SqliteRepository) ListByDeck(ctx context.Context, deckID string) ([]Car
 		if err := rows.Scan(&c.ID, &c.DeckID, &c.Question, &c.Answer,
 			&c.LastReviewedDate, &c.NextReviewDate, &c.IntervalDays, &c.EaseFactor,
 			&c.ReviewCount, &c.LapseCount, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if err := c.Validate(); err != nil {
 			return nil, err
 		}
 		out = append(out, c)

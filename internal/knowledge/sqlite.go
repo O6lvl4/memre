@@ -58,6 +58,9 @@ func (r *SqliteRepository) FindByID(ctx context.Context, id string) (Source, err
 		return Source{}, err
 	}
 	s.Type = SourceType(t)
+	if err := s.Validate(); err != nil {
+		return Source{}, err
+	}
 	return s, nil
 }
 
@@ -77,6 +80,9 @@ func (r *SqliteRepository) ListByDeck(ctx context.Context, deckID string) ([]Sou
 			return nil, err
 		}
 		s.Type = SourceType(t)
+		if err := s.Validate(); err != nil {
+			return nil, err
+		}
 		out = append(out, s)
 	}
 	return out, rows.Err()

@@ -69,3 +69,19 @@ func (s Source) edit(name, content string, t SourceType, now string) (Source, er
 }
 
 func isBlank(s string) bool { return strings.TrimSpace(s) == "" }
+
+// Validate enforces the same invariants as newSource on a value
+// loaded from storage. Repositories call this after Scan so a row
+// that someone imported with a bogus type can never become a Source.
+func (s Source) Validate() error {
+	if isBlank(s.Name) {
+		return ErrEmptyName
+	}
+	if isBlank(s.DeckID) {
+		return ErrNoDeck
+	}
+	if !s.Type.Valid() {
+		return ErrInvalidType
+	}
+	return nil
+}

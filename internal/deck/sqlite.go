@@ -61,6 +61,9 @@ func (r *SqliteRepository) FindByID(ctx context.Context, id string) (Deck, error
 		return Deck{}, err
 	}
 	d.Level = Level(lvl)
+	if err := d.Validate(); err != nil {
+		return Deck{}, err
+	}
 	return d, nil
 }
 
@@ -79,6 +82,9 @@ func (r *SqliteRepository) List(ctx context.Context) ([]Deck, error) {
 			return nil, err
 		}
 		d.Level = Level(lvl)
+		if err := d.Validate(); err != nil {
+			return nil, err
+		}
 		out = append(out, d)
 	}
 	return out, rows.Err()

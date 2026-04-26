@@ -4,19 +4,24 @@ import (
 	"context"
 	"time"
 
+	"github.com/O6lvl4/memre/internal/events"
 	"github.com/O6lvl4/memre/internal/platform/clock"
 	"github.com/O6lvl4/memre/internal/platform/idgen"
 	"github.com/O6lvl4/memre/internal/srs"
 )
 
 type Service struct {
-	repo  Repository
-	clock clock.Clock
-	ids   idgen.Generator
+	repo   Repository
+	clock  clock.Clock
+	ids    idgen.Generator
+	events events.Publisher
 }
 
-func NewService(repo Repository, c clock.Clock, ids idgen.Generator) *Service {
-	return &Service{repo: repo, clock: c, ids: ids}
+func NewService(repo Repository, c clock.Clock, ids idgen.Generator, pub events.Publisher) *Service {
+	if pub == nil {
+		pub = events.Noop{}
+	}
+	return &Service{repo: repo, clock: c, ids: ids, events: pub}
 }
 
 type CreateInput struct {
@@ -86,6 +91,13 @@ func (s *Service) Review(ctx context.Context, cardID string, rating srs.Rating) 
 	if err := s.repo.Update(ctx, c); err != nil {
 		return Card{}, err
 	}
+	s.events.Publish(ctx, Reviewed{
+		CardID:         c.ID,
+		DeckID:         c.DeckID,
+		Rating:         rating,
+		ReviewedAtUTC:  c.LastReviewedDate,
+		NewIntervalDay: c.IntervalDays,
+	})
 	return c, nil
 }
 

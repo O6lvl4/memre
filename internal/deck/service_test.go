@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/O6lvl4/memre/internal/card"
 	"github.com/O6lvl4/memre/internal/platform/clock"
 	"github.com/O6lvl4/memre/internal/platform/idgen"
 )
@@ -24,7 +23,7 @@ func (r *memRepo) FindByID(_ context.Context, id string) (Deck, error) {
 	if d, ok := r.data[id]; ok {
 		return d, nil
 	}
-	return Deck{}, ErrEmptyName // any sentinel is fine for the test
+	return Deck{}, ErrEmptyName
 }
 func (r *memRepo) List(_ context.Context) ([]Deck, error) {
 	out := make([]Deck, 0, len(r.data))
@@ -34,25 +33,22 @@ func (r *memRepo) List(_ context.Context) ([]Deck, error) {
 	return out, nil
 }
 
-// in-memory CardRepository — only ListByDeck is exercised by deck.Service
-type memCardRepo struct{ m map[string][]card.Card }
-
-func (r *memCardRepo) Create(context.Context, card.Card) error { return nil }
-func (r *memCardRepo) Update(context.Context, card.Card) error { return nil }
-func (r *memCardRepo) Delete(context.Context, string) error    { return nil }
-func (r *memCardRepo) FindByID(context.Context, string) (card.Card, error) {
-	return card.Card{}, nil
-}
-func (r *memCardRepo) ListByDeck(_ context.Context, id string) ([]card.Card, error) {
-	return r.m[id], nil
+// memStats is a fake StatsRepository: tests put expected Stats keyed
+// by deckID and the service fetches them like a read model.
+type memStats struct {
+	per map[string]Stats
 }
 
-func newSvc() (*Service, *memRepo, *memCardRepo, *clock.Fake) {
+func (m *memStats) ForDeck(_ context.Context, id string) (Stats, error) {
+	return m.per[id], nil
+}
+
+func newSvc() (*Service, *memRepo, *memStats, *clock.Fake) {
 	dr := newMemRepo()
-	cr := &memCardRepo{m: map[string][]card.Card{}}
+	st := &memStats{per: map[string]Stats{}}
 	clk := clock.NewFake(time.Date(2026, 4, 26, 0, 0, 0, 0, time.UTC))
 	ids := idgen.NewSequential("d-")
-	return NewService(dr, cr, clk, ids), dr, cr, clk
+	return NewService(dr, st, clk, ids), dr, st, clk
 }
 
 func TestServiceCreateUsesIDGenWhenBlank(t *testing.T) {
@@ -109,20 +105,10 @@ func TestServiceUpdateBumpsTimestamp(t *testing.T) {
 	}
 }
 
-func TestServiceListProducesStats(t *testing.T) {
-	svc, _, cr, clk := newSvc()
+func TestServiceListUsesStatsRepository(t *testing.T) {
+	svc, _, st, _ := newSvc()
 	_, _ = svc.Create(context.Background(), CreateInput{ID: "d1", Name: "X"})
-
-	now := clk.Now()
-	cr.m["d1"] = []card.Card{
-		{ID: "c1", DeckID: "d1"}, // new card
-		{
-			ID: "c2", DeckID: "d1",
-			LastReviewedDate: now.Add(-2 * 24 * time.Hour).Format(time.RFC3339),
-			NextReviewDate:   now.Add(-24 * time.Hour).Format(time.RFC3339), // due
-			IntervalDays:     1,
-		},
-	}
+	st.per["d1"] = Stats{TotalCards: 2, NewCount: 1, DueCount: 1, RetentionRate: 75}
 
 	out, err := svc.List(context.Background())
 	if err != nil {
@@ -131,8 +117,8 @@ func TestServiceListProducesStats(t *testing.T) {
 	if len(out) != 1 {
 		t.Fatalf("want 1 deck got %d", len(out))
 	}
-	stats := out[0].Stats
-	if stats.TotalCards != 2 || stats.NewCount != 1 || stats.DueCount != 1 {
-		t.Errorf("unexpected stats: %+v", stats)
+	if got := out[0].Stats; got.TotalCards != 2 || got.NewCount != 1 ||
+		got.DueCount != 1 || got.RetentionRate != 75 {
+		t.Errorf("stats not from read model: %+v", got)
 	}
 }

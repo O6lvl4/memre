@@ -4,24 +4,22 @@ import (
 	"context"
 	"time"
 
-	"github.com/O6lvl4/memre/internal/card"
 	"github.com/O6lvl4/memre/internal/platform/clock"
 	"github.com/O6lvl4/memre/internal/platform/idgen"
-	"github.com/O6lvl4/memre/internal/srs"
 )
 
-// Service is the entrypoint for every Deck operation. Dependencies are
-// stored as fields and supplied at construction so tests substitute
-// fakes by hand without any DI framework.
+// Service is the entrypoint for every Deck operation. It depends on a
+// per-deck Repository plus a *read-model* StatsRepository — so it never
+// has to reach into the Card aggregate to compute deck-level views.
 type Service struct {
 	repo  Repository
-	cards card.Repository
+	stats StatsRepository
 	clock clock.Clock
 	ids   idgen.Generator
 }
 
-func NewService(repo Repository, cards card.Repository, c clock.Clock, ids idgen.Generator) *Service {
-	return &Service{repo: repo, cards: cards, clock: c, ids: ids}
+func NewService(repo Repository, stats StatsRepository, c clock.Clock, ids idgen.Generator) *Service {
+	return &Service{repo: repo, stats: stats, clock: c, ids: ids}
 }
 
 type CreateInput struct {
@@ -85,41 +83,16 @@ func (s *Service) List(ctx context.Context) ([]WithStats, error) {
 	if err != nil {
 		return nil, err
 	}
-	now := s.clock.Now().UTC()
 	out := make([]WithStats, 0, len(decks))
 	for _, d := range decks {
-		cs, err := s.cards.ListByDeck(ctx, d.ID)
+		st, err := s.stats.ForDeck(ctx, d.ID)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, WithStats{Deck: d, Stats: deckStats(cs, now)})
+		out = append(out, WithStats{Deck: d, Stats: st})
 	}
 	return out, nil
 }
 
-func deckStats(cards []card.Card, now time.Time) Stats {
-	s := Stats{TotalCards: len(cards)}
-	if s.TotalCards == 0 {
-		return s
-	}
-	var sumRet float64
-	reviewed := 0
-	for _, c := range cards {
-		if c.IsNew() {
-			s.NewCount++
-			continue
-		}
-		if c.IsDue(now) {
-			s.DueCount++
-		}
-		if t, err := time.Parse(time.RFC3339, c.LastReviewedDate); err == nil {
-			days := now.Sub(t).Hours() / 24
-			sumRet += srs.RetentionRate(days, c.IntervalDays, true)
-			reviewed++
-		}
-	}
-	if reviewed > 0 {
-		s.RetentionRate = sumRet / float64(reviewed)
-	}
-	return s
-}
+// keep `time` import busy in case future deck logic needs it
+var _ = time.Now

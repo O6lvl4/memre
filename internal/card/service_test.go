@@ -37,7 +37,7 @@ func newSvc() (*Service, *memRepo, *clock.Fake) {
 	r := newMemRepo()
 	clk := clock.NewFake(time.Date(2026, 4, 26, 0, 0, 0, 0, time.UTC))
 	ids := idgen.NewSequential("c-")
-	return NewService(r, clk, ids), r, clk
+	return NewService(r, clk, ids, nil /* default Noop publisher */), r, clk
 }
 
 func TestCreateAssignsIDFromGen(t *testing.T) {

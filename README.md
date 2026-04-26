@@ -69,6 +69,50 @@ internal/
 
 **2026 Go DDD** style: vertical slice (one bounded context per directory), consumer-side `Repository` interfaces, `Service` structs with methods, no separate `domain/application/infrastructure/` layer dirs. Tests substitute fakes in-package without any DI framework.
 
+### Context map
+
+```mermaid
+flowchart LR
+    subgraph desktop[Desktop process]
+        deck["<b>deck</b><br/>Deck aggregate +<br/>Service + StatsRepo"]
+        card["<b>card</b><br/>Card aggregate +<br/>SRS application"]
+        knowledge["<b>knowledge</b><br/>KnowledgeSource"]
+        settings["<b>settings</b><br/>K/V config"]
+        ai["<b>ai</b><br/>Anti-corruption<br/>layer over LLMs"]
+        srs["<b>srs</b><br/>pure SM-2 kernel"]
+        platform["<b>platform</b><br/>sqlite / clock / idgen"]
+        events["<b>events</b><br/>in-process bus"]
+        composition["composition root"]
+    end
+
+    subgraph external[External systems]
+        ollama["Ollama<br/>local daemon"]
+        anthropic["Anthropic API"]
+        claudecli["claude CLI"]
+    end
+
+    composition --> deck & card & knowledge & ai & settings
+    deck -->|Repository + StatsRepo| platform
+    card -->|Repository| platform
+    knowledge -->|Repository| platform
+    settings -->|Repository| platform
+    card -->|publishes card.Reviewed| events
+    card --> srs
+    deck --> srs
+    ai -->|Provider port| ollama & anthropic & claudecli
+```
+
+**Bounded context relationships**
+
+| From → To | Relationship | Notes |
+|---|---|---|
+| `deck` ← `card` data | **read model** via `StatsRepository` | deck never imports card; deck-level stats come from a dedicated read-model port computed against the cards table |
+| `card` → `events` | **published events** | `card.Reviewed` lets future gamification / achievement subscribers react without coupling |
+| `card` / `deck` → `srs` | **shared kernel** | pure scheduling math used by both, no state |
+| `ai` → external LLMs | **anti-corruption layer** | `Provider` interface insulates the rest of the app from JSON Schemas, model names, and provider quirks |
+| every slice → `platform` | **infrastructure** | each slice owns its own `Sqlite*` adapter that depends on the shared `Store` |
+| `composition` → all | **composition root** | the only place concrete adapters meet ports |
+
 ## Quick start (development)
 
 Requirements: Go 1.25+, Node 20+, Xcode CLT, [`wails3`](https://v3.wails.io) CLI.

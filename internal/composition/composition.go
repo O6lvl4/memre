@@ -12,6 +12,7 @@ import (
 	"github.com/O6lvl4/memre/internal/ai"
 	"github.com/O6lvl4/memre/internal/card"
 	"github.com/O6lvl4/memre/internal/deck"
+	"github.com/O6lvl4/memre/internal/events"
 	"github.com/O6lvl4/memre/internal/knowledge"
 	"github.com/O6lvl4/memre/internal/platform/clock"
 	"github.com/O6lvl4/memre/internal/platform/idgen"
@@ -48,13 +49,17 @@ func Run(assets embed.FS) error {
 		return settingsSvc.GetOr(context.Background(), settings.KeyAIAnthropicAPIKey, "")
 	}
 
+	// --- Event bus (in-process, synchronous) ----------------------------
+	bus := events.NewBus()
+
 	// --- Feature slices --------------------------------------------------
 	deckRepo := deck.NewSqliteRepository(store)
+	deckStats := deck.NewSqliteStatsRepository(store, clk)
 	cardRepo := card.NewSqliteRepository(store)
 	ksRepo := knowledge.NewSqliteRepository(store)
 
-	deckSvc := deck.NewService(deckRepo, cardRepo, clk, ids)
-	cardSvc := card.NewService(cardRepo, clk, ids)
+	deckSvc := deck.NewService(deckRepo, deckStats, clk, ids)
+	cardSvc := card.NewService(cardRepo, clk, ids, bus)
 	ksSvc := knowledge.NewService(ksRepo, clk, ids)
 
 	// --- AI registry: wire all providers, default from settings ---------

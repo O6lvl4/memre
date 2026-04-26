@@ -104,3 +104,18 @@ type WithStats struct {
 }
 
 func isBlank(s string) bool { return strings.TrimSpace(s) == "" }
+
+// Validate runs the same invariant checks that newDeck enforces, but
+// against an *already constructed* Deck. Repositories call this after
+// loading from storage so a malformed row (e.g. an unknown level value
+// from a future schema migration) can never silently leak into the
+// domain.
+func (d Deck) Validate() error {
+	if isBlank(d.Name) {
+		return ErrEmptyName
+	}
+	if d.Level != "" && !d.Level.Valid() {
+		return ErrInvalidLevel
+	}
+	return nil
+}
