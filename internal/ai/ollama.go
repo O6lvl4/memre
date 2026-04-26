@@ -130,7 +130,14 @@ func (o *Ollama) warmupOnce() {
 		})
 		req, _ := http.NewRequestWithContext(ctx, "POST", o.baseURL+"/api/generate", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		_, _ = o.hc.Do(req)
+		resp, err := o.hc.Do(req)
+		if err != nil {
+			return
+		}
+		// Always drain + close the body so the underlying connection
+		// can be reused (and our fd count doesn't drift over warmups).
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
 	}()
 }
 
