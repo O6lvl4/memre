@@ -24,8 +24,8 @@ type Anthropic struct {
 
 const anthropicProductionBase = "https://api.anthropic.com"
 
-// AnthropicModels lists the Claude tags Memre will offer in the UI.
-// Newest first; Memre default is Sonnet.
+// AnthropicModels lists the Claude tags MemRE will offer in the UI.
+// Newest first; MemRE default is Sonnet.
 var AnthropicModels = []string{
 	"claude-opus-4-7",
 	"claude-sonnet-4-6",

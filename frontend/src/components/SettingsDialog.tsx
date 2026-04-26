@@ -172,7 +172,7 @@ export function SettingsDialog({ open, onClose, onSaved }: Props) {
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    キーはローカルSQLite (~/Library/Application Support/Memre/memre.db)
+                    キーはローカルSQLite ({"~/Library/Application Support/Memre/memre.db"})
                     に保存されます。アプリ外には送信しません。
                   </p>
                 </section>

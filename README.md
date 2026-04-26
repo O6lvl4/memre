@@ -1,4 +1,4 @@
-# Memre
+# MemRE
 
 AI-powered spaced repetition flashcards as a native macOS desktop app.
 

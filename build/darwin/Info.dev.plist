@@ -4,15 +4,17 @@
         <key>CFBundlePackageType</key>
             <string>APPL</string>
         <key>CFBundleName</key>
-            <string>Memre</string>
+            <string>MemRE</string>
+        <key>CFBundleDisplayName</key>
+            <string>MemRE</string>
         <key>CFBundleExecutable</key>
             <string>memre</string>
         <key>CFBundleIdentifier</key>
-            <string>org.aid-on.memre</string>
+            <string>app.memre.desktop</string>
         <key>CFBundleVersion</key>
             <string>0.1.0</string>
         <key>CFBundleGetInfoString</key>
-            <string>This is a comment</string>
+            <string>AI-powered spaced repetition flashcards (dev build).</string>
         <key>CFBundleShortVersionString</key>
             <string>0.1.0</string>
         <key>CFBundleIconFile</key>
@@ -24,7 +26,7 @@
         <key>NSHighResolutionCapable</key>
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
-            <string>© 2026, My Company</string>
+            <string>© 2026 MemRE. Released under the MIT License.</string>
         <key>NSAppTransportSecurity</key>
         <dict>
             <key>NSAllowsLocalNetworking</key>

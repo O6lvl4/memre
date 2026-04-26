@@ -7,9 +7,9 @@
     <key>CFBundleIdentifier</key>
     <string>org.aid-on.memre</string>
     <key>CFBundleName</key>
-    <string>Memre</string>
+    <string>MemRE</string>
     <key>CFBundleDisplayName</key>
-    <string>Memre</string>
+    <string>MemRE</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

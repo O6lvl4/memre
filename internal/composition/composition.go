@@ -103,7 +103,7 @@ func Run(assets embed.FS) error {
 	aiH := ai.NewWailsHandler(aiSvc)
 
 	app := wailsapp.New(wailsapp.Options{
-		Name:        "Memre",
+		Name:        "MemRE",
 		Description: "AI-powered spaced repetition flashcards",
 		Services: []wailsapp.Service{
 			wailsapp.NewService(deckH),
@@ -121,7 +121,7 @@ func Run(assets embed.FS) error {
 	})
 
 	app.Window.NewWithOptions(wailsapp.WebviewWindowOptions{
-		Title:  "Memre",
+		Title:  "MemRE",
 		Width:  1180,
 		Height: 800,
 		Mac: wailsapp.MacWindow{

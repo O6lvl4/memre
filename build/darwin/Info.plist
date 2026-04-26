@@ -4,7 +4,9 @@
         <key>CFBundlePackageType</key>
             <string>APPL</string>
         <key>CFBundleName</key>
-            <string>Memre</string>
+            <string>MemRE</string>
+        <key>CFBundleDisplayName</key>
+            <string>MemRE</string>
         <key>CFBundleExecutable</key>
             <string>memre</string>
         <key>CFBundleIdentifier</key>
@@ -24,6 +26,6 @@
         <key>NSHighResolutionCapable</key>
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
-            <string>© 2026 Memre. Released under the MIT License.</string>
+            <string>© 2026 MemRE. Released under the MIT License.</string>
     </dict>
 </plist>

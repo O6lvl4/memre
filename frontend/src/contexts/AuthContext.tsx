@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { User } from "../lib/storage";
 
-// Local-only stub: Memre is a desktop app sharing a single device user.
+// Local-only stub: MemRE is a desktop app sharing a single device user.
 // Existing components use `user.id` to scope storage; we hand them a fixed id.
 const LOCAL_USER: User = {
   id: "local",

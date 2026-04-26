@@ -1,4 +1,4 @@
-// Memre is the desktop app's entry point.
+// MemRE is the desktop app's entry point.
 //
 // This file is intentionally tiny: it owns only the embed.FS for the
 // pre-built frontend and the call into the composition root, which lives
