@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   go:
-    name: Go test + build
+    name: Go test + vet
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,31 +21,40 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
-      - name: go vet
-        run: go vet ./...
+      # main.go embeds frontend/dist — that's CI-built only, so vet/build
+      # are scoped to internal/... here. The full-build job below verifies
+      # the embed compiles end to end on macOS.
+      - name: go vet (internal only)
+        run: go vet ./internal/...
       - name: go test
         run: go test -race -count=1 -cover ./internal/...
-      - name: go build (ignore embed of frontend/dist)
-        # Frontend build runs in parallel; we can't embed without it,
-        # so just verify internal packages compile.
+      - name: go build (internal only)
         run: go build ./internal/...
 
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: true
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-      - name: Install
+      - name: Install Wails CLI
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
+      - name: Install npm deps
+        working-directory: frontend
         run: npm ci
+      - name: Generate Wails TS bindings
+        # frontend/bindings is gitignored; regenerate before tsc/vite.
+        run: $(go env GOPATH)/bin/wails3 generate bindings -ts
       - name: Type check + Vite build
+        working-directory: frontend
         run: npm run build
 
   full-build:
@@ -63,12 +72,17 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
+      - name: Install Wails CLI
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
+      - name: Install npm deps
+        working-directory: frontend
+        run: npm ci
+      - name: Generate Wails TS bindings
+        run: $(go env GOPATH)/bin/wails3 generate bindings -ts
       - name: Build frontend
         working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-      - name: Build Go binary
+        run: npm run build
+      - name: Build Go binary (now that frontend/dist exists for embed)
         run: go build -o memre .
       - name: Verify binary launches (3s smoke test)
         run: |
