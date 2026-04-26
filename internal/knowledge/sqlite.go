@@ -18,10 +18,16 @@ func NewSqliteRepository(s *sqlite.Store) *SqliteRepository {
 
 var ErrNotFound = errors.New("knowledge source not found")
 
+// Create is a true upsert (see card/sqlite.go for rationale).
 func (r *SqliteRepository) Create(ctx context.Context, s Source) error {
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO knowledge_sources(id,deck_id,name,content,type,created_at,updated_at)
-		 VALUES(?,?,?,?,?,?,?)`,
+		 VALUES(?,?,?,?,?,?,?)
+		 ON CONFLICT(id) DO UPDATE SET
+		   name=excluded.name,
+		   content=excluded.content,
+		   type=excluded.type,
+		   updated_at=excluded.updated_at`,
 		s.ID, s.DeckID, s.Name, s.Content, string(s.Type), s.CreatedAt, s.UpdatedAt,
 	)
 	return err

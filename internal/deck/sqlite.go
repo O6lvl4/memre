@@ -21,9 +21,16 @@ func NewSqliteRepository(s *sqlite.Store) *SqliteRepository {
 
 var ErrNotFound = errors.New("deck not found")
 
+// Create is a true upsert (see card/sqlite.go for rationale).
 func (r *SqliteRepository) Create(ctx context.Context, d Deck) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO decks(id,name,color,description,level,created_at,updated_at) VALUES(?,?,?,?,?,?,?)`,
+		`INSERT INTO decks(id,name,color,description,level,created_at,updated_at) VALUES(?,?,?,?,?,?,?)
+		 ON CONFLICT(id) DO UPDATE SET
+		   name=excluded.name,
+		   color=excluded.color,
+		   description=excluded.description,
+		   level=excluded.level,
+		   updated_at=excluded.updated_at`,
 		d.ID, d.Name, d.Color, d.Description, string(d.Level), d.CreatedAt, d.UpdatedAt,
 	)
 	return err

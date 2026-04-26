@@ -18,10 +18,22 @@ func NewSqliteRepository(s *sqlite.Store) *SqliteRepository {
 
 var ErrNotFound = errors.New("card not found")
 
+// Create is a true upsert: when the frontend re-saves a card whose id
+// already exists (for example, after a review pass that mutates SRS
+// state and then triggers a bulk save), we update fields in place
+// instead of erroring on the UNIQUE constraint. created_at is preserved
+// from the existing row.
 func (r *SqliteRepository) Create(ctx context.Context, c Card) error {
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO cards(id,deck_id,question,answer,interval_days,ease_factor,created_at,updated_at)
-		 VALUES(?,?,?,?,?,?,?,?)`,
+		 VALUES(?,?,?,?,?,?,?,?)
+		 ON CONFLICT(id) DO UPDATE SET
+		   deck_id=excluded.deck_id,
+		   question=excluded.question,
+		   answer=excluded.answer,
+		   interval_days=excluded.interval_days,
+		   ease_factor=excluded.ease_factor,
+		   updated_at=excluded.updated_at`,
 		c.ID, c.DeckID, c.Question, c.Answer, c.IntervalDays, c.EaseFactor, c.CreatedAt, c.UpdatedAt,
 	)
 	return err

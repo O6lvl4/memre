@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layers, Sparkles, AlertCircle, Settings as Cog } from "lucide-react";
+import { Sparkles, AlertCircle, Settings as Cog } from "lucide-react";
 import { getAIStatus, type AIStatus } from "../lib/api";
 import { SettingsDialog } from "./SettingsDialog";
 
@@ -29,9 +29,12 @@ export function AppHeader() {
         style={{ padding: "var(--space-sm) var(--space-md)", height: "56px" }}
       >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-white">
-            <Layers className="w-4 h-4" />
-          </div>
+          <img
+            src="/icon.svg"
+            alt="MemRE"
+            className="w-8 h-8"
+            draggable={false}
+          />
           <span
             className="text-[#2C3E50]"
             style={{ fontSize: "var(--text-xl)", fontWeight: "bold" }}

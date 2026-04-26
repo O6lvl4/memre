@@ -43,6 +43,33 @@ func TestCardSqliteRoundtrip(t *testing.T) {
 	}
 }
 
+func TestCardCreateIsUpsert(t *testing.T) {
+	// The frontend's bulk-save path can call Create twice for the same
+	// card id (once at creation, once after a review). The second call
+	// must succeed and reflect the updated fields rather than failing
+	// on UNIQUE constraint.
+	r, _ := openRepoWithDeck(t)
+	c1 := Card{ID: "c1", DeckID: "d1", Question: "Q1", Answer: "A1",
+		EaseFactor: 2.5, CreatedAt: ts2, UpdatedAt: ts2}
+	if err := r.Create(context.Background(), c1); err != nil {
+		t.Fatal(err)
+	}
+	c2 := c1
+	c2.Question = "Q2"
+	c2.Answer = "A2"
+	c2.UpdatedAt = "2026-04-27T00:00:00Z"
+	if err := r.Create(context.Background(), c2); err != nil {
+		t.Fatalf("second Create should upsert, got %v", err)
+	}
+	got, _ := r.FindByID(context.Background(), "c1")
+	if got.Question != "Q2" || got.Answer != "A2" {
+		t.Errorf("upsert did not apply new fields: %+v", got)
+	}
+	if got.CreatedAt != ts2 {
+		t.Errorf("upsert should preserve created_at, got %q", got.CreatedAt)
+	}
+}
+
 func TestCardForeignKeyEnforced(t *testing.T) {
 	r, _ := openRepoWithDeck(t)
 	bad := Card{ID: "x", DeckID: "no-such-deck", Question: "Q", Answer: "A",
